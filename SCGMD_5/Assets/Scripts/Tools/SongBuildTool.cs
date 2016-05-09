@@ -10,7 +10,7 @@ public class ReadOnly : PropertyAttribute { }
 public class ReadOnlyDrawer : PropertyDrawer {
 	public override void OnGUI(Rect position, SerializedProperty property, GUIContent label) {
 		GUI.enabled = false;
-		EditorGUI.PropertyField (position, property, label, true);
+		EditorGUI.PropertyField (position, property, new GUIContent(""), true);
 		GUI.enabled = true;
 	}
 }
@@ -21,7 +21,7 @@ public class SongBuildTool : EditorWindow {
 	[ReadOnly] public int[] noteCount;
 
 
-	private Vector2 scrollPosition;
+	private Vector2 scrollPosition, scrollSongList;
 
 	private string songPath;
 	private ScriptableObject target;
@@ -37,7 +37,6 @@ public class SongBuildTool : EditorWindow {
 
 
 	private List<int[,]> notes;
-
 
 
 	private int oldSelectedSong = 1;
@@ -182,13 +181,17 @@ public class SongBuildTool : EditorWindow {
 			EditorGUILayout.Space ();
 
 			so.Update ();
-			GUILayout.BeginHorizontal ();
+			scrollSongList = GUILayout.BeginScrollView (scrollSongList);
 			{
-				EditorGUILayout.PropertyField (availableSongsProperty, true);
-				EditorGUILayout.PropertyField (sampleCountProperty, true, GUILayout.MaxWidth (230.0f));
-				EditorGUILayout.PropertyField (noteCountProperty, true, GUILayout.MaxWidth (200.0f));
+				GUILayout.BeginHorizontal ();
+				{
+					EditorGUILayout.PropertyField (availableSongsProperty, true);
+					EditorGUILayout.PropertyField (sampleCountProperty, true, GUILayout.MaxWidth (230.0f));
+					EditorGUILayout.PropertyField (noteCountProperty, true, GUILayout.MaxWidth (200.0f));
+				}
+				GUILayout.EndHorizontal ();
 			}
-			GUILayout.EndHorizontal ();
+			GUILayout.EndScrollView ();
 			so.ApplyModifiedProperties ();
 
 			EditorGUILayout.Space ();
@@ -460,9 +463,9 @@ public class SongBuildTool : EditorWindow {
 
 			for (int i = 0; i < guids.Length; ++i) {
 				availableSongs [i] = AssetDatabase.LoadAssetAtPath (AssetDatabase.GUIDToAssetPath (guids [i]), typeof(AudioClip)) as AudioClip;
+				EditorUtility.DisplayProgressBar ("Searching for Songs", availableSongs[i].name, Mathf.InverseLerp(0, availableSongs.Length, i));
 
 				sampleCount [i] = availableSongs [i].samples;
-				Debug.Log ("Sample rate: " + availableSongs [i].frequency + "; Song length: " + availableSongs [i].length + "; Sample count: " + sampleCount [i]);
 				noteCount [i] = sampleCount [i] / 10000;
 			}
 
@@ -473,16 +476,29 @@ public class SongBuildTool : EditorWindow {
 	}
 
 	private void ResetNotes() {
+		int noteCnt = 0;
+		foreach (int i in noteCount) {
+			noteCnt += i;
+		}
+
+//		int x = 0;
 		notes = new List<int[,]>();
 		for (int i = 0; i < availableSongs.Length; ++i) {
-			notes.Add(new int[noteCount[i], 4]);
+			notes.Add(new int[noteCount[i] + 1, 4]);
 
 			for (int j = 0; j < notes [i].GetLength (0); ++j) {
 				for (int k = 0; k < notes [i].GetLength (1); ++k) {
 					notes [i] [j, k] = -1;
 				}
+
+//				EditorUtility.DisplayProgressBar ("Resetting notes", availableSongs[i].name, Mathf.InverseLerp(0, noteCnt, x));
+//				++x;
 			}
+
+			EditorUtility.DisplayProgressBar ("Resetting notes>", availableSongs[i].name, Mathf.InverseLerp(0, availableSongs.Length, i));
 		}
+
+		EditorUtility.ClearProgressBar ();
 	}
 
 	private void SwitchSong() {
