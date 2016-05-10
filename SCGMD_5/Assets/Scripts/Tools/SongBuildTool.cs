@@ -14,7 +14,12 @@ public class ReadOnly : PropertyAttribute { }
 public class ReadOnlyDrawer : PropertyDrawer {
 	public override void OnGUI(Rect position, SerializedProperty property, GUIContent label) {
 		GUI.enabled = false;
-		EditorGUI.PropertyField (position, property, new GUIContent(""), true);
+		int i = label.text.IndexOf (" ");
+		EditorGUIUtility.labelWidth = 45.0f;
+		{
+			EditorGUI.PropertyField (position, property, new GUIContent (label.text.Substring (i)), true);
+		}
+		EditorGUIUtility.labelWidth = 150.0f;
 		GUI.enabled = true;
 	}
 }
@@ -212,144 +217,36 @@ public class SongBuildTool : EditorWindow {
 			EditorGUILayout.Space ();
 			EditorGUILayout.Space ();
 
-			GUILayout.BeginHorizontal ();
+			EditorGUIUtility.labelWidth = 80.0f;
 			{
-				availableSongs [selectedSong - 1] = EditorGUILayout.ObjectField ("Song Select", availableSongs [selectedSong - 1], typeof(AudioClip), true) as AudioClip;
-				selectedSong = EditorGUILayout.IntSlider (selectedSong, 1, availableSongs.Length);
+				GUILayout.BeginHorizontal ();
+				{
+					availableSongs [selectedSong - 1] = EditorGUILayout.ObjectField ("Song Select", availableSongs [selectedSong - 1], typeof(AudioClip), true) as AudioClip;
+					selectedSong = EditorGUILayout.IntSlider (selectedSong, 1, availableSongs.Length);
+				}
+				GUILayout.EndHorizontal ();
+				audioPosition = EditorGUILayout.IntSlider ("Time:", audioPosition, 0, (int)availableSongs [selectedSong - 1].length);
+				audioSamplePosition = EditorGUILayout.IntSlider ("Sample:", audioSamplePosition, 0, sampleCount [selectedSong - 1]);
 			}
-			GUILayout.EndHorizontal ();
-			audioPosition = EditorGUILayout.IntSlider ("Time:", audioPosition, 0, (int)availableSongs [selectedSong - 1].length);
-			audioSamplePosition = EditorGUILayout.IntSlider ("Sample:", audioSamplePosition, 0, sampleCount [selectedSong - 1]);
+			EditorGUIUtility.labelWidth = 150.0f;
 
 			EditorGUILayout.Space ();
 			EditorGUILayout.Space ();
 			EditorGUILayout.Space ();
 
-			GUILayout.BeginHorizontal ();
-			{
-				EditorGUILayout.Space ();
-				EditorGUILayout.Space ();
-				if (GUILayout.Button("Add Note", GUILayout.MaxWidth (100.0f))) {
-					notes [selectedSong - 1] [audioNotePosition, 0] = 0;
-				}
-
-				if (GUILayout.Button("Add Hold Note", GUILayout.MaxWidth (100.0f))) {
-					notes [selectedSong - 1] [audioNotePosition, 0] = longNoteLength;
-				}
-
-				EditorGUILayout.LabelField ("Length:", GUILayout.MaxWidth (50.0f));
-				longNoteLength = EditorGUILayout.IntField (longNoteLength, GUILayout.MaxWidth (50.0f));
-
-				EditorGUILayout.Space ();
-
-				EditorGUILayout.LabelField ("Note:", GUILayout.MaxWidth (40.0f));
-				notes [selectedSong - 1] [audioNotePosition, 0] = EditorGUILayout.IntField (notes [selectedSong - 1] [audioNotePosition, 0], GUILayout.MaxWidth (50.0f));
-				EditorGUILayout.LabelField (" ", GUILayout.MaxWidth (50.0f));
-
-				if (GUILayout.Button("Remove Note", GUILayout.MaxWidth (100.0f))) {
-					notes [selectedSong - 1] [audioNotePosition, 0] = -1;
-				}
-
-				EditorGUILayout.Space ();
-				EditorGUILayout.Space ();
-			}
-			GUILayout.EndHorizontal ();
+			this.DisplayNoteEditor (0);
 
 			EditorGUILayout.Space ();
 
-			GUILayout.BeginHorizontal ();
-			{
-				EditorGUILayout.Space ();
-				EditorGUILayout.Space ();
-				if (GUILayout.Button("Add Note", GUILayout.MaxWidth (100.0f))) {
-					notes [selectedSong - 1] [audioNotePosition, 1] = 0;
-				}
-
-				if (GUILayout.Button("Add Hold Note", GUILayout.MaxWidth (100.0f))) {
-					notes [selectedSong - 1] [audioNotePosition, 1] = longNoteLength;
-				}
-
-				EditorGUILayout.LabelField ("Length:", GUILayout.MaxWidth (50.0f));
-				longNoteLength = EditorGUILayout.IntField (longNoteLength, GUILayout.MaxWidth (50.0f));
-
-				EditorGUILayout.Space ();
-
-				EditorGUILayout.LabelField ("Note:", GUILayout.MaxWidth (40.0f));
-				notes [selectedSong - 1] [audioNotePosition, 1] = EditorGUILayout.IntField (notes [selectedSong - 1] [audioNotePosition, 1], GUILayout.MaxWidth (50.0f));
-				EditorGUILayout.LabelField (" ", GUILayout.MaxWidth (50.0f));
-
-				if (GUILayout.Button("Remove Note", GUILayout.MaxWidth (100.0f))) {
-					notes [selectedSong - 1] [audioNotePosition, 1] = -1;
-				}
-
-				EditorGUILayout.Space ();
-				EditorGUILayout.Space ();
-			}
-			GUILayout.EndHorizontal ();
+			this.DisplayNoteEditor (1);
 
 			EditorGUILayout.Space ();
 
-			GUILayout.BeginHorizontal ();
-			{
-				EditorGUILayout.Space ();
-				EditorGUILayout.Space ();
-				if (GUILayout.Button("Add Note", GUILayout.MaxWidth (100.0f))) {
-					notes [selectedSong - 1] [audioNotePosition, 2] = 0;
-				}
-
-				if (GUILayout.Button("Add Hold Note", GUILayout.MaxWidth (100.0f))) {
-					notes [selectedSong - 1] [audioNotePosition, 2] = longNoteLength;
-				}
-
-				EditorGUILayout.LabelField ("Length:", GUILayout.MaxWidth (50.0f));
-				longNoteLength = EditorGUILayout.IntField (longNoteLength, GUILayout.MaxWidth (50.0f));
-
-				EditorGUILayout.Space ();
-
-				EditorGUILayout.LabelField ("Note:", GUILayout.MaxWidth (40.0f));
-				notes [selectedSong - 1] [audioNotePosition, 2] = EditorGUILayout.IntField (notes [selectedSong - 1] [audioNotePosition, 2], GUILayout.MaxWidth (50.0f));
-				EditorGUILayout.LabelField (" ", GUILayout.MaxWidth (50.0f));
-
-				if (GUILayout.Button("Remove Note", GUILayout.MaxWidth (100.0f))) {
-					notes [selectedSong - 1] [audioNotePosition, 2] = -1;
-				}
-
-				EditorGUILayout.Space ();
-				EditorGUILayout.Space ();
-			}
-			GUILayout.EndHorizontal ();
+			this.DisplayNoteEditor (2);
 
 			EditorGUILayout.Space ();
 
-			GUILayout.BeginHorizontal ();
-			{
-				EditorGUILayout.Space ();
-				EditorGUILayout.Space ();
-				if (GUILayout.Button("Add Note", GUILayout.MaxWidth (100.0f))) {
-					notes [selectedSong - 1] [audioNotePosition, 3] = 0;
-				}
-
-				if (GUILayout.Button("Add Hold Note", GUILayout.MaxWidth (100.0f))) {
-					notes [selectedSong - 1] [audioNotePosition, 3] = longNoteLength;
-				}
-
-				EditorGUILayout.LabelField ("Length:", GUILayout.MaxWidth (50.0f));
-				longNoteLength = EditorGUILayout.IntField (longNoteLength, GUILayout.MaxWidth (50.0f));
-
-				EditorGUILayout.Space ();
-
-				EditorGUILayout.LabelField ("Note:", GUILayout.MaxWidth (40.0f));
-				notes [selectedSong - 1] [audioNotePosition, 3] = EditorGUILayout.IntField (notes [selectedSong - 1] [audioNotePosition, 3], GUILayout.MaxWidth (50.0f));
-				EditorGUILayout.LabelField (" ", GUILayout.MaxWidth (50.0f));
-
-				if (GUILayout.Button("Remove Note", GUILayout.MaxWidth (100.0f))) {
-					notes [selectedSong - 1] [audioNotePosition, 3] = -1;
-				}
-
-				EditorGUILayout.Space ();
-				EditorGUILayout.Space ();
-			}
-			GUILayout.EndHorizontal ();
+			this.DisplayNoteEditor (3);
 
 			EditorGUILayout.Space ();
 			EditorGUILayout.Space ();
@@ -357,22 +254,36 @@ public class SongBuildTool : EditorWindow {
 			GUILayout.BeginHorizontal ();
 			{
 				EditorGUILayout.Space ();
-
-				EditorGUILayout.LabelField ("Notes at:", GUILayout.MaxWidth (55.0f));
-				EditorGUILayout.LabelField (audioNotePosition.ToString(), GUILayout.MaxWidth (50.0f));
-
-				EditorGUILayout.Space ();
-			}
-			GUILayout.EndHorizontal ();
-
-			GUILayout.BeginHorizontal ();
-			{
-				EditorGUILayout.Space ();
-				EditorGUILayout.Space ();
 				EditorGUILayout.Space ();
 				EditorGUILayout.Space ();
 
-				if (GUILayout.Button (new GUIContent("Remove all", "Removes all notes in current note"), GUILayout.MaxWidth (150.0f))) {
+				if (GUILayout.Button ("׀◄", GUILayout.MaxWidth (90.0f))) {
+					if (audioNotePosition >= noteJump) {
+						audioNotePosition -= noteJump;
+					} else {
+						audioNotePosition = 0;
+					}
+				}
+
+				EditorGUIUtility.labelWidth = 55.0f;
+				{
+					audioNotePosition = EditorGUILayout.IntField ("Notes at:", audioNotePosition, GUILayout.MaxWidth (EditorGUIUtility.labelWidth + 35.0f));
+				}
+				EditorGUIUtility.labelWidth = 150.0f;
+
+				if (GUILayout.Button ("►׀", GUILayout.MaxWidth (90.0f))) {
+					if (audioNotePosition <= noteCount [selectedSong - 1] - noteJump) {
+						audioNotePosition += noteJump;
+					} else {
+						audioNotePosition = noteCount [selectedSong - 1];
+					}
+				}
+
+				EditorGUILayout.Space ();
+				EditorGUILayout.Space ();
+				EditorGUILayout.Space ();
+
+				if (GUILayout.Button (new GUIContent("Remove all notes", "Removes all notes in current note"), GUILayout.MaxWidth (204.0f))) {
 					for (int i = 0; i < 4; ++i) {
 						notes [selectedSong - 1] [audioNotePosition, i] = -1;
 					}
@@ -388,10 +299,33 @@ public class SongBuildTool : EditorWindow {
 				EditorGUILayout.Space ();
 				EditorGUILayout.Space ();
 				EditorGUILayout.Space ();
+
+				EditorGUIUtility.labelWidth = 80.0f;
+				{
+					noteJump = EditorGUILayout.IntSlider ("Skip notes:", noteJump, 0, noteCount [selectedSong - 1], GUILayout.MaxWidth(278.0f));
+				}
+				EditorGUIUtility.labelWidth = 150.0f;
+
+				EditorGUILayout.Space ();
+				EditorGUILayout.Space ();
 				EditorGUILayout.Space ();
 
-				if (GUILayout.Button (new GUIContent("Reset all songs", "Resets all notes in all songs"), GUILayout.MaxWidth (150.0f))) {
-					this.ResetNotes ();
+				if (GUILayout.Button (new GUIContent("Reset song", "Resets all notes in current song"), GUILayout.MaxWidth (100.0f))) {
+					this.ResetNotes (selectedSong - 1);
+
+					audioSamplePosition = 0;
+				}
+
+				if (GUILayout.Button (new GUIContent("Reset all songs", "Resets all notes in all songs"), GUILayout.MaxWidth (100.0f))) {
+					for (int i = 0; i < availableSongs.Length; ++i) {
+						this.ResetNotes (i, true);
+
+						EditorUtility.DisplayProgressBar ("Resetting notes:", availableSongs [i].name, Mathf.InverseLerp (0, availableSongs.Length, i));
+					}
+
+					EditorUtility.ClearProgressBar ();
+
+					audioSamplePosition = 0;
 				}
 				GUILayout.Label (GUI.tooltip, GUILayout.MaxWidth (200.0f));
 			}
@@ -399,7 +333,11 @@ public class SongBuildTool : EditorWindow {
 
 			EditorGUILayout.Space ();
 
-			audioNotePosition = EditorGUILayout.IntSlider ("Note:", audioNotePosition, 0, noteCount [selectedSong - 1]);
+			EditorGUIUtility.labelWidth = 80.0f;
+			{
+				audioNotePosition = EditorGUILayout.IntSlider ("Note:", audioNotePosition, 0, noteCount [selectedSong - 1]);
+			}
+			EditorGUIUtility.labelWidth = 150.0f;
 
 			EditorGUILayout.Space ();
 
@@ -445,7 +383,7 @@ public class SongBuildTool : EditorWindow {
 			GUILayout.BeginHorizontal ();
 			{
 				if (GUILayout.Button ("׀◄◄")) {
-					if (audioPosition == 0) {
+					if (audioNotePosition == 0) {
 						if (selectedSong <= 1) {
 							selectedSong = availableSongs.Length;
 						} else {
@@ -456,10 +394,6 @@ public class SongBuildTool : EditorWindow {
 					} else {
 						audioPosition = 0;
 					}
-				}
-
-				if (GUILayout.Button ("׀◄")) {
-					if (audioNotePosition >= noteJump) audioNotePosition -= noteJump;
 				}
 
 				if (GUILayout.Button (playPauseLabel)) {
@@ -481,25 +415,74 @@ public class SongBuildTool : EditorWindow {
 					playPauseLabel = "►";
 				}
 
-				if (GUILayout.Button ("►׀")) {
-					if (audioNotePosition <= noteCount [selectedSong - 1] - noteJump) audioNotePosition += noteJump;
-				}
-
 				if (GUILayout.Button ("►►׀")) {
-					if (selectedSong >= availableSongs.Length) {
-						selectedSong = 1;
-					} else {
-						++selectedSong;
-					}
+					if (audioNotePosition == noteCount [selectedSong - 1]) {
+						if (selectedSong >= availableSongs.Length) {
+							selectedSong = 1;
+						} else {
+							++selectedSong;
+						}
 
-					this.SwitchSong ();
+						this.SwitchSong ();
+					} else {
+						audioNotePosition = noteCount [selectedSong - 1];
+					}
 				}
 			}
 			GUILayout.EndHorizontal ();
-
-			noteJump = EditorGUILayout.IntSlider ("Skip notes:", noteJump, 0, noteCount [selectedSong - 1]);
 		}
 		GUILayout.EndScrollView ();
+	}
+
+	private void DisplayNoteEditor(int i) {
+		GUILayout.BeginHorizontal ();
+		{
+			EditorGUILayout.Space ();
+			EditorGUILayout.Space ();
+			if (GUILayout.Button("Add Note", GUILayout.MaxWidth (100.0f))) {
+				notes [selectedSong - 1] [audioNotePosition, i] = 0;
+			}
+
+			if (GUILayout.Button("Add Hold Note", GUILayout.MaxWidth (100.0f))) {
+				notes [selectedSong - 1] [audioNotePosition, i] = longNoteLength;
+			}
+
+			EditorGUIUtility.labelWidth = 50.0f;
+			{
+				longNoteLength = EditorGUILayout.IntField ("Length:", longNoteLength, GUILayout.MaxWidth (EditorGUIUtility.labelWidth + 50.0f));
+
+				if (longNoteLength < 0) {
+					longNoteLength = 2;
+				} else if (longNoteLength > (noteCount [selectedSong - 1] - audioNotePosition)) {
+					longNoteLength = noteCount [selectedSong - 1] - audioNotePosition;
+				}
+			}
+			EditorGUIUtility.labelWidth = 150.0f;
+
+			EditorGUILayout.Space ();
+
+			EditorGUIUtility.labelWidth = 40.0f;
+			{
+				notes [selectedSong - 1] [audioNotePosition, i] = EditorGUILayout.IntField ("Note:", notes [selectedSong - 1] [audioNotePosition, i], GUILayout.MaxWidth (EditorGUIUtility.labelWidth + 50.0f));
+
+				if (notes [selectedSong - 1] [audioNotePosition, i] < -1) {
+					notes [selectedSong - 1] [audioNotePosition, i] = -1;
+				} else if (notes [selectedSong - 1] [audioNotePosition, i] > (noteCount [selectedSong - 1] - audioNotePosition)) {
+					notes [selectedSong - 1] [audioNotePosition, i] = noteCount [selectedSong - 1] - audioNotePosition;
+				}
+
+				EditorGUILayout.LabelField (" ", GUILayout.MaxWidth (50.0f));
+			}
+			EditorGUIUtility.labelWidth = 150.0f;
+
+			if (GUILayout.Button("Remove Note", GUILayout.MaxWidth (100.0f))) {
+				notes [selectedSong - 1] [audioNotePosition, i] = -1;
+			}
+
+			EditorGUILayout.Space ();
+			EditorGUILayout.Space ();
+		}
+		GUILayout.EndHorizontal ();
 	}
 
 
@@ -522,13 +505,13 @@ public class SongBuildTool : EditorWindow {
 
 			EditorUtility.ClearProgressBar ();
 			
-			this.ResetNotes ();
+			this.CreateNotes ();
 		} else {
 			EditorUtility.DisplayDialog ("Error", "Selected folder does not contain any AudioClips", "OK");
 		}
 	}
 
-	private void ResetNotes() {
+	private void CreateNotes() {
 		notes = new List<int[,]>();
 
 		for (int i = 0; i < availableSongs.Length; ++i) {
@@ -539,17 +522,25 @@ public class SongBuildTool : EditorWindow {
 
 				EditorUtility.DisplayProgressBar ("Loading notes", availableSongs[i].name, Mathf.InverseLerp(0, availableSongs.Length, i));
 			} else {
-				for (int j = 0; j < notes [i].GetLength (0); ++j) {
-					for (int k = 0; k < notes [i].GetLength (1); ++k) {
-						notes [i] [j, k] = -1;
-					}
-				}
+				this.ResetNotes (i, true);
 
 				EditorUtility.DisplayProgressBar ("Resetting notes:", availableSongs [i].name, Mathf.InverseLerp (0, availableSongs.Length, i));
 			}
 		}
 
 		EditorUtility.ClearProgressBar ();
+	}
+
+	private void ResetNotes(int i, bool resetAll = false) {
+		for (int j = 0; j < notes [i].GetLength (0); ++j) {
+			for (int k = 0; k < notes [i].GetLength (1); ++k) {
+				notes [i] [j, k] = -1;
+			}
+
+			if (!resetAll) EditorUtility.DisplayProgressBar ("Resetting notes:", availableSongs [i].name, Mathf.InverseLerp (0, notes [i].GetLength (0), j));
+		}
+
+		if (!resetAll) EditorUtility.ClearProgressBar ();
 	}
 
 	private void SwitchSong() {
