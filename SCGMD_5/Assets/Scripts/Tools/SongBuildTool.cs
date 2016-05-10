@@ -1,8 +1,12 @@
 ﻿using UnityEngine;
 using UnityEditor;
+using System;
+using System.IO;
+using System.Reflection;
 using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
+using System.Runtime.Serialization.Formatters.Binary;
+
 
 public class ReadOnly : PropertyAttribute { }
 
@@ -14,6 +18,17 @@ public class ReadOnlyDrawer : PropertyDrawer {
 		GUI.enabled = true;
 	}
 }
+
+
+[Serializable]
+public class NoteContainer {
+	public int[,] notes;
+
+	public NoteContainer(int noteCount) {
+		notes = new int[noteCount, 4];
+	}
+}
+
 
 public class SongBuildTool : EditorWindow {
 	[ReadOnly] public AudioClip[] availableSongs;
@@ -67,7 +82,6 @@ public class SongBuildTool : EditorWindow {
 		availableSongsProperty = so.FindProperty ("availableSongs");
 		sampleCountProperty    = so.FindProperty ("sampleCount");
 		noteCountProperty      = so.FindProperty ("noteCount");
-
 
 		songPath = "Assets/Audio/Music";
 		this.FindSongs ();
@@ -388,6 +402,43 @@ public class SongBuildTool : EditorWindow {
 			audioNotePosition = EditorGUILayout.IntSlider ("Note:", audioNotePosition, 0, noteCount [selectedSong - 1]);
 
 			EditorGUILayout.Space ();
+
+			GUILayout.BeginHorizontal ();
+			{
+				if (GUILayout.Button ("Save song")) {
+					this.SaveSong (selectedSong - 1);
+				}
+
+				if (GUILayout.Button ("Load song")) {
+					this.LoadSong (selectedSong - 1);
+				}
+
+				EditorGUILayout.Space ();
+				EditorGUILayout.Space ();
+				EditorGUILayout.Space ();
+				EditorGUILayout.Space ();
+
+				if (GUILayout.Button ("Save all")) {
+					for (int i = 0; i < availableSongs.Length; ++i) {
+						this.SaveSong (i, true);
+						EditorUtility.DisplayProgressBar ("Saving notes", availableSongs[i].name, Mathf.InverseLerp(0, availableSongs.Length, i));
+					}
+
+					EditorUtility.ClearProgressBar ();
+				}
+
+				if (GUILayout.Button ("Load all")) {
+					for (int i = 0; i < availableSongs.Length; ++i) {
+						this.LoadSong (i, true);
+						EditorUtility.DisplayProgressBar ("Loading notes", availableSongs[i].name, Mathf.InverseLerp(0, availableSongs.Length, i));
+					}
+
+					EditorUtility.ClearProgressBar ();
+				}
+			}
+			GUILayout.EndHorizontal ();
+
+			EditorGUILayout.Space ();
 			EditorGUILayout.Space ();
 			EditorGUILayout.Space ();
 
@@ -463,12 +514,14 @@ public class SongBuildTool : EditorWindow {
 
 			for (int i = 0; i < guids.Length; ++i) {
 				availableSongs [i] = AssetDatabase.LoadAssetAtPath (AssetDatabase.GUIDToAssetPath (guids [i]), typeof(AudioClip)) as AudioClip;
-				EditorUtility.DisplayProgressBar ("Searching for Songs", availableSongs[i].name, Mathf.InverseLerp(0, availableSongs.Length, i));
+				EditorUtility.DisplayProgressBar ("Loading songs", "Loaded: " + availableSongs[i].name, Mathf.InverseLerp(0, availableSongs.Length, i));
 
 				sampleCount [i] = availableSongs [i].samples;
 				noteCount [i] = sampleCount [i] / 10000;
 			}
 
+			EditorUtility.ClearProgressBar ();
+			
 			this.ResetNotes ();
 		} else {
 			EditorUtility.DisplayDialog ("Error", "Selected folder does not contain any AudioClips", "OK");
@@ -476,26 +529,24 @@ public class SongBuildTool : EditorWindow {
 	}
 
 	private void ResetNotes() {
-		int noteCnt = 0;
-		foreach (int i in noteCount) {
-			noteCnt += i;
-		}
-
-//		int x = 0;
 		notes = new List<int[,]>();
-		for (int i = 0; i < availableSongs.Length; ++i) {
-			notes.Add(new int[noteCount[i] + 1, 4]);
 
-			for (int j = 0; j < notes [i].GetLength (0); ++j) {
-				for (int k = 0; k < notes [i].GetLength (1); ++k) {
-					notes [i] [j, k] = -1;
+		for (int i = 0; i < availableSongs.Length; ++i) {
+			notes.Add (new int[noteCount [i] + 1, 4]);
+
+			if (this.CheckSave (i)) {
+				this.LoadSong (i, true);
+
+				EditorUtility.DisplayProgressBar ("Loading notes", availableSongs[i].name, Mathf.InverseLerp(0, availableSongs.Length, i));
+			} else {
+				for (int j = 0; j < notes [i].GetLength (0); ++j) {
+					for (int k = 0; k < notes [i].GetLength (1); ++k) {
+						notes [i] [j, k] = -1;
+					}
 				}
 
-//				EditorUtility.DisplayProgressBar ("Resetting notes", availableSongs[i].name, Mathf.InverseLerp(0, noteCnt, x));
-//				++x;
+				EditorUtility.DisplayProgressBar ("Resetting notes:", availableSongs [i].name, Mathf.InverseLerp (0, availableSongs.Length, i));
 			}
-
-			EditorUtility.DisplayProgressBar ("Resetting notes>", availableSongs[i].name, Mathf.InverseLerp(0, availableSongs.Length, i));
 		}
 
 		EditorUtility.ClearProgressBar ();
@@ -517,6 +568,56 @@ public class SongBuildTool : EditorWindow {
 		audioPosition = 0;
 		audioSamplePosition = 0;
 		audioNotePosition = 0;
+	}
+
+
+	public void SaveSong(int song, bool saveAll = false) {
+		BinaryFormatter binaryFormatter = new BinaryFormatter ();
+
+		FileStream file = File.Open (Application.persistentDataPath + "/" + availableSongs [song].name + "_notes.dat", FileMode.Create);
+		{
+			NoteContainer noteContainer = new NoteContainer (noteCount[song] + 1);
+
+			for (int i = 0; i < notes [song].GetLength (0); ++i) {
+				for (int j = 0; j < notes [song].GetLength (1); ++j) {
+					noteContainer.notes [i, j] = notes [song] [i, j];
+				}
+
+				if (!saveAll) EditorUtility.DisplayProgressBar ("Saving notes", availableSongs [song].name, Mathf.InverseLerp (0, notes [song].GetLength (0), i));
+			}
+
+			if (!saveAll) EditorUtility.ClearProgressBar ();
+
+			binaryFormatter.Serialize (file, noteContainer);
+		}
+		file.Close ();
+	}
+
+	public void LoadSong(int song, bool saveAll = false) {
+		if (this.CheckSave(song)) {
+			BinaryFormatter binaryFormatter = new BinaryFormatter ();
+			NoteContainer noteContainer;
+
+			FileStream file = File.Open (Application.persistentDataPath + "/" + availableSongs [song].name + "_notes.dat", FileMode.Open);
+			{
+				noteContainer = (NoteContainer)binaryFormatter.Deserialize (file);
+			}
+			file.Close ();
+
+			for (int i = 0; i < noteContainer.notes.GetLength (0); ++i) {
+				for (int j = 0; j < noteContainer.notes.GetLength (1); ++j) {
+					notes [song] [i, j] = noteContainer.notes [i, j];
+				}
+
+				if (!saveAll) EditorUtility.DisplayProgressBar ("Loading notes", availableSongs [song].name, Mathf.InverseLerp (0, noteContainer.notes.GetLength (0), i));
+			}
+
+			if (!saveAll) EditorUtility.ClearProgressBar ();
+		}
+	}
+
+	public bool CheckSave(int song) {
+		return File.Exists (Application.persistentDataPath + "/" + availableSongs [song].name + "_notes.dat");
 	}
 
 
