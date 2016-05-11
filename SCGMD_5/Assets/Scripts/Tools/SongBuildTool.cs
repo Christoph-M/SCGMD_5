@@ -14,12 +14,15 @@ public class ReadOnly : PropertyAttribute { }
 public class ReadOnlyDrawer : PropertyDrawer {
 	public override void OnGUI(Rect position, SerializedProperty property, GUIContent label) {
 		GUI.enabled = false;
-		int i = label.text.IndexOf (" ");
-		EditorGUIUtility.labelWidth = 45.0f;
 		{
-			EditorGUI.PropertyField (position, property, new GUIContent (label.text.Substring (i + 1)), true);
+			int i = label.text.IndexOf (" ");
+
+			EditorGUIUtility.labelWidth = 45.0f;
+			{
+				EditorGUI.PropertyField (position, property, new GUIContent (label.text.Substring (i + 1)), true);
+			}
+			EditorGUIUtility.labelWidth = 150.0f;
 		}
-		EditorGUIUtility.labelWidth = 150.0f;
 		GUI.enabled = true;
 	}
 }
@@ -48,6 +51,7 @@ public class SongBuildTool : EditorWindow {
 	private SerializedObject so;
 	private SerializedProperty availableSongsProperty, sampleCountProperty, noteCountProperty;
 
+	private int notesPerSecond = 10;
 	private int selectedSong;
 	private int audioPosition, audioSamplePosition, audioNotePosition;
 	private int longNoteLength;
@@ -74,7 +78,7 @@ public class SongBuildTool : EditorWindow {
 
 
 
-	[MenuItem ("Window/SongEditor")]
+	[MenuItem ("Window/Song Editor")]
 	public static void ShowWindow() {
 		EditorWindow.GetWindow (typeof(SongBuildTool));
 	}
@@ -128,19 +132,19 @@ public class SongBuildTool : EditorWindow {
 		switch (action) {
 			case 0:
 				if (IsPlaying (availableSongs [selectedSong - 1]) && !isPaused) {
+					audioPosition       = audioSamplePosition /  availableSongs [selectedSong - 1].frequency;
 					audioSamplePosition = GetSamplePosition (availableSongs [selectedSong - 1]);
-					audioPosition       = audioSamplePosition / availableSongs [selectedSong - 1].frequency;
-					audioNotePosition   = audioSamplePosition / 10000;
+					audioNotePosition   = audioSamplePosition / (availableSongs [selectedSong - 1].frequency / notesPerSecond);
 				} break;
 			case 1:
-				audioSamplePosition = audioPosition       * availableSongs [selectedSong - 1].frequency;
-				audioNotePosition   = audioSamplePosition / 10000; break;
+				audioSamplePosition = audioPosition       *  availableSongs [selectedSong - 1].frequency;
+				audioNotePosition   = audioSamplePosition / (availableSongs [selectedSong - 1].frequency / notesPerSecond); break;
 			case 2: case 3: case 6: case 7:
-				audioPosition       = audioSamplePosition / availableSongs [selectedSong - 1].frequency;
-				audioNotePosition   = audioSamplePosition / 10000; break;
+				audioPosition       = audioSamplePosition /  availableSongs [selectedSong - 1].frequency;
+				audioNotePosition   = audioSamplePosition / (availableSongs [selectedSong - 1].frequency / notesPerSecond); break;
 			case 4: case 5:
-				audioSamplePosition = audioNotePosition   * 10000;
-				audioPosition       = audioSamplePosition / availableSongs [selectedSong - 1].frequency; break;
+				audioSamplePosition = audioNotePosition   * (availableSongs [selectedSong - 1].frequency / notesPerSecond);
+				audioPosition       = audioSamplePosition /  availableSongs [selectedSong - 1].frequency; break;
 		}
 
 		if (action > 0) SetSamplePosition (availableSongs [selectedSong - 1], audioSamplePosition);
@@ -230,7 +234,8 @@ public class SongBuildTool : EditorWindow {
 			{
 				GUILayout.BeginHorizontal ();
 				{
-					availableSongs [selectedSong - 1] = EditorGUILayout.ObjectField ("Song Select", availableSongs [selectedSong - 1], typeof(AudioClip), true) as AudioClip;
+					GUILayout.Label("Song Select", GUILayout.MaxWidth(80.0f));
+					EditorGUILayout.PropertyField (availableSongsProperty.GetArrayElementAtIndex(selectedSong - 1), new GUIContent(""));
 					selectedSong = EditorGUILayout.IntSlider (selectedSong, 1, availableSongs.Length);
 				}
 				GUILayout.EndHorizontal ();
@@ -302,7 +307,7 @@ public class SongBuildTool : EditorWindow {
 
 				EditorGUIUtility.labelWidth = 80.0f;
 				{
-					noteJump = EditorGUILayout.IntSlider ("Skip notes:", noteJump, 0, noteCount [selectedSong - 1], GUILayout.MaxWidth(278.0f));
+					noteJump = EditorGUILayout.IntSlider ("Skip notes:", noteJump, 1, noteCount [selectedSong - 1], GUILayout.MaxWidth(278.0f));
 				}
 				EditorGUIUtility.labelWidth = 150.0f;
 
@@ -508,7 +513,7 @@ public class SongBuildTool : EditorWindow {
 				EditorUtility.DisplayProgressBar ("Loading songs", "Loaded: " + availableSongs[i].name, Mathf.InverseLerp(0, availableSongs.Length, i));
 
 				sampleCount [i] = availableSongs [i].samples;
-				noteCount [i] = sampleCount [i] / 10000;
+				noteCount [i] = sampleCount [i] / (availableSongs [i].frequency / notesPerSecond);
 			}
 
 			EditorUtility.ClearProgressBar ();
