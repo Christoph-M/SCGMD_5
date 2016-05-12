@@ -37,6 +37,16 @@ public class NoteContainer {
 	}
 }
 
+[Serializable]
+public class SongListContainer {
+	public string songPath;
+	public string[] names;
+
+	public SongListContainer(int i) {
+		names = new string[i];
+	}
+}
+
 
 public class SongBuildTool : EditorWindow {
 	[ReadOnly] public AudioClip[] availableSongs;
@@ -92,7 +102,7 @@ public class SongBuildTool : EditorWindow {
 		sampleCountProperty    = so.FindProperty ("sampleCount");
 		noteCountProperty      = so.FindProperty ("noteCount");
 
-		songPath = "Assets/Audio/Music";
+		songPath = "Assets/Resources/Audio/Music";
 		this.FindSongs ();
 
 		selectedSong = 1;
@@ -118,6 +128,10 @@ public class SongBuildTool : EditorWindow {
 
 	void OnDisable() {
 		StopAllClips ();
+	}
+
+	void Update() {
+		Repaint ();
 	}
 
 	void OnInspectorUpdate() {
@@ -166,6 +180,39 @@ public class SongBuildTool : EditorWindow {
 	}
 
 	void OnGUI () {
+		Event e = Event.current;
+
+		if (e.type == EventType.keyUp) {
+			if (e != null && e.keyCode == KeyCode.Space) {
+				this.PlayPause ();
+			}
+
+			if (e != null && e.keyCode == KeyCode.RightArrow) {
+				this.IncrementNotePosition ();
+			}
+
+			if (e != null && e.keyCode == KeyCode.LeftArrow) {
+				this.DecrementNotePosition ();
+			}
+
+			if (e != null && (e.keyCode == KeyCode.Alpha1 || e.keyCode == KeyCode.Keypad1)) {
+				notes [selectedSong - 1] [audioNotePosition, 0] = 0;
+			}
+
+			if (e != null && (e.keyCode == KeyCode.Alpha2 || e.keyCode == KeyCode.Keypad2)) {
+				notes [selectedSong - 1] [audioNotePosition, 1] = 0;
+			}
+
+			if (e != null && (e.keyCode == KeyCode.Alpha3 || e.keyCode == KeyCode.Keypad3)) {
+				notes [selectedSong - 1] [audioNotePosition, 2] = 0;
+			}
+
+			if (e != null && (e.keyCode == KeyCode.Alpha4 || e.keyCode == KeyCode.Keypad4)) {
+				notes [selectedSong - 1] [audioNotePosition, 3] = 0;
+			}
+		}
+
+
 		scrollPosition = GUILayout.BeginScrollView (scrollPosition);
 		{
 			GUILayout.BeginHorizontal ();
@@ -175,14 +222,14 @@ public class SongBuildTool : EditorWindow {
 						string newSongPath = EditorUtility.OpenFolderPanel ("Choose music folder", "Assets/", "");
 
 						if (newSongPath != "") {
-							if (newSongPath.Contains (Application.dataPath)) {
+							if (newSongPath.Contains (Application.dataPath + "/Resources")) {
 								int i = newSongPath.IndexOf ("Assets");
 
 								songPath = newSongPath.Substring (i);
 						
 								this.FindSongs ();
 							} else {
-								EditorUtility.DisplayDialog ("Error", "Chosen path is not in Assets folder", "OK");
+								EditorUtility.DisplayDialog ("Error", "Chosen path is not in Assets/Resources/", "OK");
 							}
 						}
 					}
@@ -263,11 +310,7 @@ public class SongBuildTool : EditorWindow {
 				EditorGUILayout.Space ();
 
 				if (GUILayout.Button ("׀◄", GUILayout.MaxWidth (90.0f))) {
-					if (audioNotePosition >= noteJump) {
-						audioNotePosition -= noteJump;
-					} else {
-						this.ResetAudioPosition ();
-					}
+					this.DecrementNotePosition ();
 				}
 
 				EditorGUIUtility.labelWidth = 55.0f;
@@ -277,11 +320,7 @@ public class SongBuildTool : EditorWindow {
 				EditorGUIUtility.labelWidth = 150.0f;
 
 				if (GUILayout.Button ("►׀", GUILayout.MaxWidth (90.0f))) {
-					if (audioNotePosition <= noteCount [selectedSong - 1] - noteJump) {
-						audioNotePosition += noteJump;
-					} else {
-						audioNotePosition = noteCount [selectedSong - 1];
-					}
+					this.IncrementNotePosition ();
 				}
 
 				EditorGUILayout.Space ();
@@ -319,6 +358,8 @@ public class SongBuildTool : EditorWindow {
 					if (EditorUtility.DisplayDialog ("Reset " + availableSongs[selectedSong - 1].name + "?", "Are you sure you want to reset all notes in " + availableSongs[selectedSong - 1].name + "?", "Reset", "Cancel")) {
 						this.ResetNotes (selectedSong - 1);
 
+						EditorUtility.ClearProgressBar ();
+
 						this.ResetAudioPosition ();
 					}
 				}
@@ -327,8 +368,6 @@ public class SongBuildTool : EditorWindow {
 					if (EditorUtility.DisplayDialog ("Reset all songs?", "Are you sure you want to reset all notes in all songs?", "Reset", "Cancel")) {
 						for (int i = 0; i < availableSongs.Length; ++i) {
 							this.ResetNotes (i);
-
-							EditorUtility.DisplayProgressBar ("Resetting notes:", availableSongs [i].name, Mathf.InverseLerp (0, availableSongs.Length, i));
 						}
 
 						EditorUtility.ClearProgressBar ();
@@ -354,11 +393,15 @@ public class SongBuildTool : EditorWindow {
 			{
 				if (GUILayout.Button ("Save song")) {
 					this.SaveSong (selectedSong - 1);
+
+					EditorUtility.ClearProgressBar ();
 				}
 
 				if (GUILayout.Button ("Load song")) {
 					if (EditorUtility.DisplayDialog ("Load " + availableSongs[selectedSong - 1].name + "?", "Are you sure you want to load " + availableSongs[selectedSong - 1].name + "?\nAll unsaved data will be lost!", "Load", "Cancel")) {
 						this.LoadSong (selectedSong - 1);
+
+						EditorUtility.ClearProgressBar ();
 					}
 				}
 
@@ -370,7 +413,6 @@ public class SongBuildTool : EditorWindow {
 				if (GUILayout.Button ("Save all")) {
 					for (int i = 0; i < availableSongs.Length; ++i) {
 						this.SaveSong (i);
-						EditorUtility.DisplayProgressBar ("Saving notes", availableSongs[i].name, Mathf.InverseLerp(0, availableSongs.Length, i));
 					}
 
 					EditorUtility.ClearProgressBar ();
@@ -380,7 +422,6 @@ public class SongBuildTool : EditorWindow {
 					if (EditorUtility.DisplayDialog ("Load all songs?", "Are you sure you want to load all songs?\nAll unsaved data will be lost!", "Load", "Cancel")) {
 						for (int i = 0; i < availableSongs.Length; ++i) {
 							this.LoadSong (i);
-							EditorUtility.DisplayProgressBar ("Loading notes", availableSongs [i].name, Mathf.InverseLerp (0, availableSongs.Length, i));
 						}
 
 						EditorUtility.ClearProgressBar ();
@@ -410,14 +451,7 @@ public class SongBuildTool : EditorWindow {
 				}
 
 				if (GUILayout.Button (playPauseLabel)) {
-					PlayPauseSong (availableSongs [selectedSong - 1]);
-					SetSamplePosition (availableSongs [selectedSong - 1], audioSamplePosition);
-
-					if (isPaused) {
-						playPauseLabel = "►";
-					} else {
-						playPauseLabel = "▌▌";
-					}
+					this.PlayPause ();
 				}
 
 				if (GUILayout.Button ("■")) {
@@ -517,7 +551,8 @@ public class SongBuildTool : EditorWindow {
 			}
 
 			EditorUtility.ClearProgressBar ();
-			
+
+			this.SaveSongList ();
 			this.CreateNotes ();
 		} else {
 			EditorUtility.DisplayDialog ("Error", "Selected folder does not contain any AudioClips", "OK");
@@ -536,6 +571,8 @@ public class SongBuildTool : EditorWindow {
 				this.ResetNotes (i);
 			}
 		}
+
+		EditorUtility.ClearProgressBar ();
 	}
 
 	private void ResetNotes(int i) {
@@ -544,10 +581,8 @@ public class SongBuildTool : EditorWindow {
 				notes [i] [j, k] = -1;
 			}
 
-			if (j % 4 == 0) EditorUtility.DisplayProgressBar ("Resetting notes", availableSongs [i].name, Mathf.InverseLerp (0, notes [i].GetLength (0), j));
+			if (j % 32 == 0) EditorUtility.DisplayProgressBar ("Resetting notes", availableSongs [i].name, Mathf.InverseLerp (0, notes [i].GetLength (0), j));
 		}
-
-		EditorUtility.ClearProgressBar ();
 	}
 
 	private void SwitchSong() {
@@ -557,6 +592,33 @@ public class SongBuildTool : EditorWindow {
 			StopAllClips ();
 
 			PlayPauseSong (availableSongs [selectedSong - 1]);
+		}
+	}
+
+	private void PlayPause() {
+		PlayPauseSong (availableSongs [selectedSong - 1]);
+		SetSamplePosition (availableSongs [selectedSong - 1], audioSamplePosition);
+
+		if (isPaused) {
+			playPauseLabel = "►";
+		} else {
+			playPauseLabel = "▌▌";
+		}
+	}
+
+	private void IncrementNotePosition() {
+		if (audioNotePosition <= noteCount [selectedSong - 1] - noteJump) {
+			audioNotePosition += noteJump;
+		} else {
+			audioNotePosition = noteCount [selectedSong - 1];
+		}
+	}
+
+	private void DecrementNotePosition() {
+		if (audioNotePosition >= noteJump) {
+			audioNotePosition -= noteJump;
+		} else {
+			this.ResetAudioPosition ();
 		}
 	}
 
@@ -579,12 +641,28 @@ public class SongBuildTool : EditorWindow {
 					noteContainer.notes [i, j] = notes [song] [i, j];
 				}
 
-				if (i % 4 == 0) EditorUtility.DisplayProgressBar ("Saving notes", availableSongs [song].name, Mathf.InverseLerp (0, notes [song].GetLength (0), i));
+				if (i % 32 == 0) EditorUtility.DisplayProgressBar ("Saving notes", availableSongs [song].name, Mathf.InverseLerp (0, notes [song].GetLength (0), i));
 			}
 
-			EditorUtility.ClearProgressBar ();
-
 			binaryFormatter.Serialize (file, noteContainer);
+		}
+		file.Close ();
+	}
+
+	public void SaveSongList() {
+		BinaryFormatter binaryFormatter = new BinaryFormatter ();
+
+		FileStream file = File.Open (Application.persistentDataPath + "/song_list.dat", FileMode.Create);
+		{
+			SongListContainer songListContainer = new SongListContainer (availableSongs.Length);
+
+			songListContainer.songPath = songPath;
+
+			for (int i = 0; i < availableSongs.Length; ++i) {
+				songListContainer.names[i] = availableSongs[i].name;
+			}
+
+			binaryFormatter.Serialize (file, songListContainer);
 		}
 		file.Close ();
 	}
@@ -605,10 +683,8 @@ public class SongBuildTool : EditorWindow {
 					notes [song] [i, j] = noteContainer.notes [i, j];
 				}
 
-				if (i % 4 == 0) EditorUtility.DisplayProgressBar ("Loading notes", availableSongs [song].name, Mathf.InverseLerp (0, noteContainer.notes.GetLength (0), i));
+				if (i % 32 == 0) EditorUtility.DisplayProgressBar ("Loading notes", availableSongs [song].name, Mathf.InverseLerp (0, noteContainer.notes.GetLength (0), i));
 			}
-
-			EditorUtility.ClearProgressBar ();
 		}
 	}
 
