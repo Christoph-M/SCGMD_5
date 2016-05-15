@@ -189,7 +189,23 @@ public class SongBuildTool : EditorWindow {
 
 		if (e.type == EventType.keyUp) {
 			if (e != null && e.keyCode == KeyCode.Space) {
+				if (isPaused || !IsPlaying(availableSongs[selectedSong - 1])) {
+					this.PlayPause ();
+				} else {
+					this.Stop ();
+				}
+			}
+
+			if (e != null && e.keyCode == KeyCode.Return) {
 				this.PlayPause ();
+			}
+
+			if (e != null && e.keyCode == KeyCode.Backspace) {
+				StopAllClips ();
+
+				this.ResetAudioPosition ();
+
+				playPauseLabel = "►";
 			}
 
 			if (e != null && e.keyCode == KeyCode.RightArrow) {
@@ -478,8 +494,6 @@ public class SongBuildTool : EditorWindow {
 
 				if (GUILayout.Button ("■")) {
 					this.Stop ();
-
-					playPauseLabel = "►";
 				}
 
 				if (GUILayout.Button ("►►׀")) {
@@ -637,6 +651,8 @@ public class SongBuildTool : EditorWindow {
 
 		audioSamplePosition = playAudioSamplePosition;
 		SetSamplePosition (availableSongs [selectedSong - 1], audioSamplePosition);
+
+		playPauseLabel = "►";
 	}
 
 	private void IncrementNotePosition() {
