@@ -69,6 +69,8 @@ public class SongBuildTool : EditorWindow {
 	private int longNoteLength;
 	private int noteJump;
 
+	private bool showRowLines = false;
+
 	private string playPauseLabel;
 
 
@@ -321,27 +323,61 @@ public class SongBuildTool : EditorWindow {
 
 			EditorGUILayout.Space ();
 
-			for (int i = 0; i < 4; ++i) {
-				this.DisplayNoteEditor (i);
+//			for (int i = 0; i < 4; ++i) {
+//				this.DisplayNoteEditor (i);
+//
+//				EditorGUILayout.Space ();
+//			}
 
-				EditorGUILayout.Space ();
-			}
-
-			Rect rt = GUILayoutUtility.GetRect (100, 300, 50, 100);
+			Rect rt = GUILayoutUtility.GetRect (100, 300, 50, 300);
 			EditorGUI.DrawRect (rt, new Color (0.7f, 0.7f, 0.7f));
-			for (int i = 1; i < 61; i += 2) {
-				int noteColumnPos = audioNotePosition + i / 2 - 15;
+			for (int i = 1; i < 41; i += 2) {
+				int noteColumnPos = audioNotePosition + i / 2 - 9;
 
-				Rect column = new Rect (rt.width / 61 * i, rt.y, rt.width / 61, rt.height);
+				Rect columnRect = new Rect (rt.width / 41 * i, rt.y, rt.width / 41, rt.height);
 
-				EditorGUI.DrawRect (column, (noteColumnPos == audioNotePosition) ? new Color(0.7f, 0.5f, 0.5f) : Color.gray);
+				EditorGUI.DrawRect (columnRect, (noteColumnPos == audioNotePosition) ? new Color(0.7f, 0.5f, 0.5f) : Color.gray);
 
 				if (noteColumnPos >= 0 && noteColumnPos < notes [selectedSong - 1].GetLength (0)) {
 					for (int f = 1; f < 9; f += 2) {
-						if (notes [selectedSong - 1] [noteColumnPos, f / 2] == 0) EditorGUI.DrawRect (new Rect (column.x, rt.y + (rt.height / 9 * f), column.width, rt.height / 9), Color.blue);
+						int note = f / 2;
+						Rect noteRect = new Rect (columnRect.x, rt.y + (rt.height / 9 * f), columnRect.width, rt.height / 9);
+
+						if (e != null && e.isMouse && e.type == EventType.MouseDown && e.button == 0) {
+							Vector2 mousePos = e.mousePosition;
+							Vector4 noteRectBounds = new Vector4 (noteRect.x, noteRect.x + noteRect.width, noteRect.y, noteRect.y + noteRect.height);
+
+							if ((mousePos.x > noteRectBounds.x && mousePos.x < noteRectBounds.y) && (mousePos.y > noteRectBounds.z && mousePos.y < noteRectBounds.w)) {
+								if (notes [selectedSong - 1] [noteColumnPos, note] == 0) {
+									notes [selectedSong - 1] [noteColumnPos, note] = -1;
+								} else {
+									notes [selectedSong - 1] [noteColumnPos, note] = 0;
+								}
+							}
+						}
+
+						EditorGUI.DrawRect (noteRect, new Color(0.5f, 0.6f, 0.6f));
+
+						if (notes [selectedSong - 1] [noteColumnPos, note] == 0) {
+							switch (note) {
+								case 0:
+									EditorGUI.DrawRect (noteRect, new Color(0.9f, 0.2f, 0.2f)); break;
+								case 1:
+									EditorGUI.DrawRect (noteRect, new Color(0.2f, 0.2f, 0.9f)); break;
+								case 2:
+									EditorGUI.DrawRect (noteRect, new Color(0.5f, 0.9f, 0.3f)); break;
+								case 3:
+									EditorGUI.DrawRect (noteRect, new Color(0.9f, 0.9f, 0.3f)); break;
+							} 
+						}
+
+						if (showRowLines) {
+							EditorGUI.DrawRect (new Rect (rt.x, noteRect.y, rt.width, 1), Color.black);
+							EditorGUI.DrawRect (new Rect (rt.x, noteRect.y + noteRect.height, rt.width, 1), Color.black);
+						}
 					}
 
-					GUI.Label (new Rect (column.x - 8, rt.yMax, 35, 20), "" + noteColumnPos);
+					GUI.Label (new Rect (columnRect.x - 5, rt.yMax, 35, 20), "" + noteColumnPos);
 				}
 			}
 
@@ -362,6 +398,10 @@ public class SongBuildTool : EditorWindow {
 				EditorGUILayout.Space ();
 				EditorGUILayout.Space ();
 				EditorGUILayout.Space ();
+				EditorGUILayout.Space ();
+				EditorGUILayout.Space ();
+				EditorGUILayout.Space ();
+				EditorGUILayout.Space ();
 
 				if (GUILayout.Button ("׀◄", GUILayout.MaxWidth (90.0f))) {
 					this.DecrementNotePosition ();
@@ -378,7 +418,13 @@ public class SongBuildTool : EditorWindow {
 				}
 
 				EditorGUILayout.Space ();
-				EditorGUILayout.Space ();
+
+				EditorGUIUtility.labelWidth = 62.0f;
+				{
+					showRowLines = EditorGUILayout.Toggle ("Row Lines", showRowLines);
+				}
+				EditorGUIUtility.labelWidth = 150.0f;
+
 				EditorGUILayout.Space ();
 
 				if (GUILayout.Button (new GUIContent("Remove all notes", "Removes all notes in current note"), GUILayout.MaxWidth (204.0f))) {
