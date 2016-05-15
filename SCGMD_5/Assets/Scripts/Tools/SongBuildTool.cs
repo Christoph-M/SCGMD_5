@@ -69,6 +69,7 @@ public class SongBuildTool : EditorWindow {
 	private int longNoteLength;
 	private int noteJump;
 
+	private int timeLineScale = 41;
 	private bool showRowLines = false;
 
 	private string playPauseLabel;
@@ -266,42 +267,34 @@ public class SongBuildTool : EditorWindow {
 				}
 
 				songPath = EditorGUILayout.TextField (songPath);
-			}
-			GUILayout.EndHorizontal ();
-
-			GUILayout.BeginHorizontal ();
-			{
-				EditorGUILayout.Space ();
 
 				if (GUILayout.Button ("Update song list", GUILayout.MaxWidth (150.0f))) {
 					if (EditorUtility.DisplayDialog ("Update song list?", "Updating the song list will reload all songs!\nAll unsaved data will be lost!", "Update", "Cancel")) {
 						this.FindSongs ();
 					}
 				}
-
-				EditorGUILayout.Space ();
-				EditorGUILayout.Space ();
-				EditorGUILayout.Space ();
-				EditorGUILayout.Space ();
-				EditorGUILayout.Space ();
 			}
 			GUILayout.EndHorizontal ();
 
 			EditorGUILayout.Space ();
 
-			so.Update ();
-			scrollSongList = GUILayout.BeginScrollView (scrollSongList);
+			GUILayout.BeginHorizontal(GUILayout.MinHeight(100.0f), GUILayout.MaxHeight(600.0f));
 			{
-				GUILayout.BeginHorizontal ();
+				so.Update ();
+				scrollSongList = GUILayout.BeginScrollView (scrollSongList);
 				{
-					EditorGUILayout.PropertyField (availableSongsProperty, true);
-					EditorGUILayout.PropertyField (sampleCountProperty, true, GUILayout.MaxWidth (230.0f));
-					EditorGUILayout.PropertyField (noteCountProperty, true, GUILayout.MaxWidth (200.0f));
+					GUILayout.BeginHorizontal ();
+					{
+						EditorGUILayout.PropertyField (availableSongsProperty, true);
+						EditorGUILayout.PropertyField (sampleCountProperty, true, GUILayout.MaxWidth (230.0f));
+						EditorGUILayout.PropertyField (noteCountProperty, true, GUILayout.MaxWidth (200.0f));
+					}
+					GUILayout.EndHorizontal ();
 				}
-				GUILayout.EndHorizontal ();
+				GUILayout.EndScrollView ();
+				so.ApplyModifiedProperties ();
 			}
-			GUILayout.EndScrollView ();
-			so.ApplyModifiedProperties ();
+			GUILayout.EndHorizontal ();
 
 			EditorGUILayout.Space ();
 			EditorGUILayout.Space ();
@@ -318,6 +311,7 @@ public class SongBuildTool : EditorWindow {
 				GUILayout.EndHorizontal ();
 				audioPosition = EditorGUILayout.IntSlider ("Time:", audioPosition, 0, (int)availableSongs [selectedSong - 1].length);
 				audioSamplePosition = EditorGUILayout.IntSlider ("Sample:", audioSamplePosition, 0, sampleCount [selectedSong - 1]);
+				audioNotePosition = EditorGUILayout.IntSlider ("Note:", audioNotePosition, 0, noteCount [selectedSong - 1]);
 			}
 			EditorGUIUtility.labelWidth = 150.0f;
 
@@ -329,33 +323,33 @@ public class SongBuildTool : EditorWindow {
 //				EditorGUILayout.Space ();
 //			}
 
-			Rect rt = GUILayoutUtility.GetRect (100, 300, 50, 300);
+			Rect timelineRect = GUILayoutUtility.GetRect (100, 300, 100, 800);
 
 			if (e != null && e.isMouse && e.button == 1) {
 				if (e.type == EventType.MouseDown) mouseStartPos = e.mousePosition;
 
-				if ((mouseStartPos.x > rt.x && mouseStartPos.x < rt.xMax) && (mouseStartPos.y > rt.y && mouseStartPos.y < rt.yMax)) {
-					if (e.type == EventType.MouseDrag && e.delta.x < 0.0f) {
+				if (e.type == EventType.MouseDrag && ((mouseStartPos.x > timelineRect.x && mouseStartPos.x < timelineRect.xMax) && (mouseStartPos.y > timelineRect.y && mouseStartPos.y < timelineRect.yMax))) {
+					if (e.delta.x < 0.0f) {
 						audioNotePosition += (int)-e.delta.x - 1;
-					} else if (e.type == EventType.MouseDrag && e.delta.x > 0.0f) {
+					} else if (e.delta.x > 0.0f) {
 						audioNotePosition -= (int)e.delta.x - 1;
 					}
 				}
 			}
 
-			EditorGUI.DrawRect (rt, new Color (0.7f, 0.7f, 0.7f));
+			EditorGUI.DrawRect (timelineRect, new Color (0.7f, 0.7f, 0.7f));
 
-			for (int i = 1; i < 41; i += 2) {
-				int noteColumnPos = audioNotePosition + i / 2 - 9;
+			for (int i = 1; i < timeLineScale; i += 2) {
+				int noteColumnPos = audioNotePosition + i / 2 - (timeLineScale / 4);
 
-				Rect columnRect = new Rect (rt.width / 41 * i, rt.y, rt.width / 41, rt.height);
+				Rect columnRect = new Rect (timelineRect.width / timeLineScale * i, timelineRect.y, timelineRect.width / timeLineScale, timelineRect.height);
 
 				EditorGUI.DrawRect (columnRect, (noteColumnPos == audioNotePosition) ? new Color(0.7f, 0.5f, 0.5f) : Color.gray);
 
 				if (noteColumnPos >= 0 && noteColumnPos < notes [selectedSong - 1].GetLength (0)) {
 					for (int f = 1; f < 9; f += 2) {
 						int note = f / 2;
-						Rect noteRect = new Rect (columnRect.x, rt.y + (rt.height / 9 * f), columnRect.width, rt.height / 9);
+						Rect noteRect = new Rect (columnRect.x, timelineRect.y + (timelineRect.height / 9 * f), columnRect.width, timelineRect.height / 9);
 
 						if (e != null && e.isMouse && e.type == EventType.MouseDown && e.button == 0) {
 							Vector2 mousePos = e.mousePosition;
@@ -385,12 +379,12 @@ public class SongBuildTool : EditorWindow {
 						}
 
 						if (showRowLines) {
-							EditorGUI.DrawRect (new Rect (rt.x, noteRect.y, rt.width, 1), Color.black);
-							EditorGUI.DrawRect (new Rect (rt.x, noteRect.y + noteRect.height, rt.width, 1), Color.black);
+							EditorGUI.DrawRect (new Rect (timelineRect.x, noteRect.y, timelineRect.width, 1), Color.black);
+							EditorGUI.DrawRect (new Rect (timelineRect.x, noteRect.y + noteRect.height, timelineRect.width, 1), Color.black);
 						}
 					}
 
-					GUI.Label (new Rect (columnRect.x - 5, rt.yMax, 35, 20), "" + noteColumnPos);
+					GUI.Label (new Rect (columnRect.x - 5, timelineRect.yMax, 35, 20), "" + noteColumnPos);
 				}
 			}
 
@@ -398,11 +392,19 @@ public class SongBuildTool : EditorWindow {
 			EditorGUILayout.Space ();
 			EditorGUILayout.Space ();
 
-			EditorGUIUtility.labelWidth = 80.0f;
+			GUILayout.BeginHorizontal ();
 			{
-				audioNotePosition = EditorGUILayout.IntSlider ("Note:", audioNotePosition, 0, noteCount [selectedSong - 1]);
+				EditorGUIUtility.labelWidth = 80.0f;
+				{
+					timeLineScale = EditorGUILayout.IntSlider ("Scale:", timeLineScale, 21, 301);
+				}
+				EditorGUIUtility.labelWidth = 150.0f;
+
+				if (GUILayout.Button ("Default", GUILayout.MaxWidth (90.0f))) {
+					timeLineScale = 41;
+				}
 			}
-			EditorGUIUtility.labelWidth = 150.0f;
+			GUILayout.EndHorizontal ();
 
 			EditorGUILayout.Space ();
 
