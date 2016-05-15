@@ -137,12 +137,7 @@ public class SongBuildTool : EditorWindow {
 	void Update() {
 		float deltaTime = Time.realtimeSinceStartup - previousFrameTime;
 
-		Repaint ();
 
-		previousFrameTime = Time.realtimeSinceStartup;
-	}
-
-	void OnInspectorUpdate() {
 		if (oldSelectedSong != selectedSong) this.SwitchSong ();
 
 
@@ -152,21 +147,21 @@ public class SongBuildTool : EditorWindow {
 		if (oldAudioNotePosition   != audioNotePosition)   action += 4;
 
 		switch (action) {
-			case 0:
-				if (IsPlaying (availableSongs [selectedSong - 1]) && !isPaused) {
-					audioPosition       = audioSamplePosition /  availableSongs [selectedSong - 1].frequency;
-					audioSamplePosition = GetSamplePosition (availableSongs [selectedSong - 1]);
-					audioNotePosition   = audioSamplePosition / (availableSongs [selectedSong - 1].frequency / notesPerSecond);
-				} break;
-			case 1:
-				audioSamplePosition = audioPosition       *  availableSongs [selectedSong - 1].frequency;
-				audioNotePosition   = audioSamplePosition / (availableSongs [selectedSong - 1].frequency / notesPerSecond); break;
-			case 2: case 3: case 6: case 7:
+		case 0:
+			if (IsPlaying (availableSongs [selectedSong - 1]) && !isPaused) {
 				audioPosition       = audioSamplePosition /  availableSongs [selectedSong - 1].frequency;
-				audioNotePosition   = audioSamplePosition / (availableSongs [selectedSong - 1].frequency / notesPerSecond); break;
-			case 4: case 5:
-				audioSamplePosition = audioNotePosition   * (availableSongs [selectedSong - 1].frequency / notesPerSecond);
-				audioPosition       = audioSamplePosition /  availableSongs [selectedSong - 1].frequency; break;
+				audioSamplePosition = GetSamplePosition (availableSongs [selectedSong - 1]);
+				audioNotePosition   = audioSamplePosition / (availableSongs [selectedSong - 1].frequency / notesPerSecond);
+			} break;
+		case 1:
+			audioSamplePosition = audioPosition       *  availableSongs [selectedSong - 1].frequency;
+			audioNotePosition   = audioSamplePosition / (availableSongs [selectedSong - 1].frequency / notesPerSecond); break;
+		case 2: case 3: case 6: case 7:
+			audioPosition       = audioSamplePosition /  availableSongs [selectedSong - 1].frequency;
+			audioNotePosition   = audioSamplePosition / (availableSongs [selectedSong - 1].frequency / notesPerSecond); break;
+		case 4: case 5:
+			audioSamplePosition = audioNotePosition   * (availableSongs [selectedSong - 1].frequency / notesPerSecond);
+			audioPosition       = audioSamplePosition /  availableSongs [selectedSong - 1].frequency; break;
 		}
 
 		if (action > 0) SetSamplePosition (availableSongs [selectedSong - 1], audioSamplePosition);
@@ -182,12 +177,18 @@ public class SongBuildTool : EditorWindow {
 			isPaused = false;
 			playPauseLabel = "►";
 		}
+
+
+		previousFrameTime = Time.realtimeSinceStartup;
+
+
+		Repaint ();
 	}
 
 	void OnGUI () {
 		Event e = Event.current;
 
-		if (e.type == EventType.keyUp) {
+		if (e.type == EventType.keyDown) {
 			if (e != null && e.keyCode == KeyCode.Space) {
 				if (isPaused || !IsPlaying(availableSongs[selectedSong - 1])) {
 					this.PlayPause ();
@@ -230,6 +231,12 @@ public class SongBuildTool : EditorWindow {
 
 			if (e != null && (e.keyCode == KeyCode.Alpha4 || e.keyCode == KeyCode.Keypad4)) {
 				notes [selectedSong - 1] [audioNotePosition, 3] = 0;
+			}
+
+			if (e != null && e.keyCode == KeyCode.Delete) {
+				for (int i = 0; i < 4; ++i) {
+					notes [selectedSong - 1] [audioNotePosition, i] = -1;
+				}
 			}
 		}
 
@@ -321,17 +328,20 @@ public class SongBuildTool : EditorWindow {
 			}
 
 			Rect rt = GUILayoutUtility.GetRect (100, 300, 50, 100);
-			for (int i = 1; i < 41; i += 2) {
-				int noteColumnPos = audioNotePosition + i / 2 - 9;
+			EditorGUI.DrawRect (rt, new Color (0.7f, 0.7f, 0.7f));
+			for (int i = 1; i < 61; i += 2) {
+				int noteColumnPos = audioNotePosition + i / 2 - 15;
 
-				EditorGUI.DrawRect (new Rect (rt.width / 41 * i, rt.y, rt.width / 41, rt.height), (noteColumnPos == audioNotePosition) ? new Color(0.7f, 0.5f, 0.5f) : Color.gray);
+				Rect column = new Rect (rt.width / 61 * i, rt.y, rt.width / 61, rt.height);
+
+				EditorGUI.DrawRect (column, (noteColumnPos == audioNotePosition) ? new Color(0.7f, 0.5f, 0.5f) : Color.gray);
 
 				if (noteColumnPos >= 0 && noteColumnPos < notes [selectedSong - 1].GetLength (0)) {
 					for (int f = 1; f < 9; f += 2) {
-						if (notes [selectedSong - 1] [noteColumnPos, f / 2] == 0) EditorGUI.DrawRect (new Rect (rt.width / 41 * i, rt.y + (rt.height / 9 * f), rt.width / 41, rt.height / 9), Color.blue);
+						if (notes [selectedSong - 1] [noteColumnPos, f / 2] == 0) EditorGUI.DrawRect (new Rect (column.x, rt.y + (rt.height / 9 * f), column.width, rt.height / 9), Color.blue);
 					}
 
-					GUI.Label (new Rect (rt.width / 41 * i - 5, rt.yMax, 35, 20), "" + noteColumnPos);
+					GUI.Label (new Rect (column.x - 8, rt.yMax, 35, 20), "" + noteColumnPos);
 				}
 			}
 
