@@ -54,7 +54,7 @@ public class SongBuildTool : EditorWindow {
 	[ReadOnly] public int[] noteCount;
 
 
-	private Vector2 scrollPosition, scrollSongList;
+	private Vector2 scrollPosition, scrollSongList, mouseStartPos;
 
 	private string songPath;
 	private ScriptableObject target;
@@ -330,7 +330,21 @@ public class SongBuildTool : EditorWindow {
 //			}
 
 			Rect rt = GUILayoutUtility.GetRect (100, 300, 50, 300);
+
+			if (e != null && e.isMouse && e.button == 1) {
+				if (e.type == EventType.MouseDown) mouseStartPos = e.mousePosition;
+
+				if ((mouseStartPos.x > rt.x && mouseStartPos.x < rt.xMax) && (mouseStartPos.y > rt.y && mouseStartPos.y < rt.yMax)) {
+					if (e.type == EventType.MouseDrag && e.delta.x < 0.0f) {
+						audioNotePosition += (int)-e.delta.x - 1;
+					} else if (e.type == EventType.MouseDrag && e.delta.x > 0.0f) {
+						audioNotePosition -= (int)e.delta.x - 1;
+					}
+				}
+			}
+
 			EditorGUI.DrawRect (rt, new Color (0.7f, 0.7f, 0.7f));
+
 			for (int i = 1; i < 41; i += 2) {
 				int noteColumnPos = audioNotePosition + i / 2 - 9;
 
@@ -345,9 +359,8 @@ public class SongBuildTool : EditorWindow {
 
 						if (e != null && e.isMouse && e.type == EventType.MouseDown && e.button == 0) {
 							Vector2 mousePos = e.mousePosition;
-							Vector4 noteRectBounds = new Vector4 (noteRect.x, noteRect.x + noteRect.width, noteRect.y, noteRect.y + noteRect.height);
 
-							if ((mousePos.x > noteRectBounds.x && mousePos.x < noteRectBounds.y) && (mousePos.y > noteRectBounds.z && mousePos.y < noteRectBounds.w)) {
+							if ((mousePos.x > noteRect.x && mousePos.x < noteRect.xMax) && (mousePos.y > noteRect.y && mousePos.y < noteRect.yMax)) {
 								if (notes [selectedSong - 1] [noteColumnPos, note] == 0) {
 									notes [selectedSong - 1] [noteColumnPos, note] = -1;
 								} else {
