@@ -61,6 +61,8 @@ public class SongBuildTool : EditorWindow {
 	private SerializedObject so;
 	private SerializedProperty availableSongsProperty, sampleCountProperty, noteCountProperty;
 
+	private float previousFrameTime;
+
 	private int notesPerSecond = 10;
 	private int selectedSong;
 	private int audioPosition, audioSamplePosition, audioNotePosition;
@@ -102,6 +104,8 @@ public class SongBuildTool : EditorWindow {
 		sampleCountProperty    = so.FindProperty ("sampleCount");
 		noteCountProperty      = so.FindProperty ("noteCount");
 
+		previousFrameTime = Time.realtimeSinceStartup;
+
 		songPath = "Assets/Resources/Audio/Music";
 		this.FindSongs ();
 
@@ -131,7 +135,11 @@ public class SongBuildTool : EditorWindow {
 	}
 
 	void Update() {
+		float deltaTime = Time.realtimeSinceStartup - previousFrameTime;
+
 		Repaint ();
+
+		previousFrameTime = Time.realtimeSinceStartup;
 	}
 
 	void OnInspectorUpdate() {
@@ -292,8 +300,6 @@ public class SongBuildTool : EditorWindow {
 			EditorGUIUtility.labelWidth = 150.0f;
 
 			EditorGUILayout.Space ();
-			EditorGUILayout.Space ();
-			EditorGUILayout.Space ();
 
 			for (int i = 0; i < 4; ++i) {
 				this.DisplayNoteEditor (i);
@@ -301,6 +307,23 @@ public class SongBuildTool : EditorWindow {
 				EditorGUILayout.Space ();
 			}
 
+			Rect rt = GUILayoutUtility.GetRect (100, 300, 50, 100);
+			for (int i = 1; i < 41; i += 2) {
+				int noteCollumPos = audioNotePosition + i / 2 - 9;
+
+				EditorGUI.DrawRect (new Rect (rt.width / 41 * i, rt.y, rt.width / 41, rt.height), (noteCollumPos == audioNotePosition) ? new Color(0.3f, 0.3f, 0.3f) : Color.gray);
+
+				if (noteCollumPos >= 0 && noteCollumPos < notes [selectedSong - 1].GetLength (0)) {
+					for (int f = 1; f < 9; f += 2) {
+						if (notes [selectedSong - 1] [noteCollumPos, f / 2] == 0) EditorGUI.DrawRect (new Rect (rt.width / 41 * i, rt.y + (rt.height / 9 * f), rt.width / 41, rt.height / 9), Color.blue);
+					}
+
+					GUI.Label (new Rect (rt.width / 41 * i - 5, rt.yMax, 35, 20), "" + noteCollumPos);
+				}
+			}
+
+			EditorGUILayout.Space ();
+			EditorGUILayout.Space ();
 			EditorGUILayout.Space ();
 
 			GUILayout.BeginHorizontal ();
