@@ -65,7 +65,7 @@ public class SongBuildTool : EditorWindow {
 
 	private int notesPerSecond = 10;
 	private int selectedSong;
-	private int audioPosition, audioSamplePosition, audioNotePosition;
+	private int audioPosition, audioSamplePosition, audioNotePosition, playAudioSamplePosition;
 	private int longNoteLength;
 	private int noteJump;
 
@@ -182,9 +182,6 @@ public class SongBuildTool : EditorWindow {
 			isPaused = false;
 			playPauseLabel = "►";
 		}
-
-
-		Repaint ();
 	}
 
 	void OnGUI () {
@@ -309,21 +306,29 @@ public class SongBuildTool : EditorWindow {
 
 			Rect rt = GUILayoutUtility.GetRect (100, 300, 50, 100);
 			for (int i = 1; i < 41; i += 2) {
-				int noteCollumPos = audioNotePosition + i / 2 - 9;
+				int noteColumnPos = audioNotePosition + i / 2 - 9;
 
-				EditorGUI.DrawRect (new Rect (rt.width / 41 * i, rt.y, rt.width / 41, rt.height), (noteCollumPos == audioNotePosition) ? new Color(0.3f, 0.3f, 0.3f) : Color.gray);
+				EditorGUI.DrawRect (new Rect (rt.width / 41 * i, rt.y, rt.width / 41, rt.height), (noteColumnPos == audioNotePosition) ? new Color(0.7f, 0.5f, 0.5f) : Color.gray);
 
-				if (noteCollumPos >= 0 && noteCollumPos < notes [selectedSong - 1].GetLength (0)) {
+				if (noteColumnPos >= 0 && noteColumnPos < notes [selectedSong - 1].GetLength (0)) {
 					for (int f = 1; f < 9; f += 2) {
-						if (notes [selectedSong - 1] [noteCollumPos, f / 2] == 0) EditorGUI.DrawRect (new Rect (rt.width / 41 * i, rt.y + (rt.height / 9 * f), rt.width / 41, rt.height / 9), Color.blue);
+						if (notes [selectedSong - 1] [noteColumnPos, f / 2] == 0) EditorGUI.DrawRect (new Rect (rt.width / 41 * i, rt.y + (rt.height / 9 * f), rt.width / 41, rt.height / 9), Color.blue);
 					}
 
-					GUI.Label (new Rect (rt.width / 41 * i - 5, rt.yMax, 35, 20), "" + noteCollumPos);
+					GUI.Label (new Rect (rt.width / 41 * i - 5, rt.yMax, 35, 20), "" + noteColumnPos);
 				}
 			}
 
 			EditorGUILayout.Space ();
 			EditorGUILayout.Space ();
+			EditorGUILayout.Space ();
+
+			EditorGUIUtility.labelWidth = 80.0f;
+			{
+				audioNotePosition = EditorGUILayout.IntSlider ("Note:", audioNotePosition, 0, noteCount [selectedSong - 1]);
+			}
+			EditorGUIUtility.labelWidth = 150.0f;
+
 			EditorGUILayout.Space ();
 
 			GUILayout.BeginHorizontal ();
@@ -403,13 +408,6 @@ public class SongBuildTool : EditorWindow {
 			GUILayout.EndHorizontal ();
 
 			EditorGUILayout.Space ();
-
-			EditorGUIUtility.labelWidth = 80.0f;
-			{
-				audioNotePosition = EditorGUILayout.IntSlider ("Note:", audioNotePosition, 0, noteCount [selectedSong - 1]);
-			}
-			EditorGUIUtility.labelWidth = 150.0f;
-
 			EditorGUILayout.Space ();
 
 			GUILayout.BeginHorizontal ();
@@ -455,7 +453,6 @@ public class SongBuildTool : EditorWindow {
 
 			EditorGUILayout.Space ();
 			EditorGUILayout.Space ();
-			EditorGUILayout.Space ();
 
 			GUILayout.BeginHorizontal ();
 			{
@@ -469,6 +466,8 @@ public class SongBuildTool : EditorWindow {
 
 						this.SwitchSong ();
 					} else {
+						StopAllClips ();
+
 						this.ResetAudioPosition ();
 					}
 				}
@@ -478,9 +477,7 @@ public class SongBuildTool : EditorWindow {
 				}
 
 				if (GUILayout.Button ("■")) {
-					StopAllClips ();
-
-					this.ResetAudioPosition ();
+					this.Stop ();
 
 					playPauseLabel = "►";
 				}
@@ -495,6 +492,8 @@ public class SongBuildTool : EditorWindow {
 
 						this.SwitchSong ();
 					} else {
+						StopAllClips ();
+
 						audioNotePosition = noteCount [selectedSong - 1];
 					}
 				}
@@ -625,8 +624,19 @@ public class SongBuildTool : EditorWindow {
 		if (isPaused) {
 			playPauseLabel = "►";
 		} else {
+			playAudioSamplePosition = audioSamplePosition;
+
 			playPauseLabel = "▌▌";
 		}
+	}
+
+	private void Stop () {
+		isPaused = true;
+
+		pauseClip.Invoke (null, new object[] { availableSongs [selectedSong - 1] });
+
+		audioSamplePosition = playAudioSamplePosition;
+		SetSamplePosition (availableSongs [selectedSong - 1], audioSamplePosition);
 	}
 
 	private void IncrementNotePosition() {
@@ -649,6 +659,7 @@ public class SongBuildTool : EditorWindow {
 		audioPosition = 0;
 		audioSamplePosition = 0;
 		audioNotePosition = 0;
+		playAudioSamplePosition = audioSamplePosition;
 	}
 
 
