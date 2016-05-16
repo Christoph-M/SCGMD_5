@@ -85,14 +85,6 @@ public class SongBuildTool : EditorWindow {
 
 
 
-	private static Assembly unityEditorAssembly;
-	private static System.Type audioUtilClass;
-	private static MethodInfo playClip, isPlaying, getSamplePosition, setSamplePosition, pauseClip, resumeClip, stopAllClips;
-
-	private static bool isPaused = false;
-
-
-
 	[MenuItem ("Window/Song Editor")]
 	public static void ShowWindow() {
 		EditorWindow.GetWindow (typeof(SongBuildTool));
@@ -119,22 +111,10 @@ public class SongBuildTool : EditorWindow {
 		noteJump = 1;
 
 		playPauseLabel = "►";
-
-
-		unityEditorAssembly = typeof(AudioImporter).Assembly;
-		audioUtilClass = unityEditorAssembly.GetType ("UnityEditor.AudioUtil");
-
-		playClip          = audioUtilClass.GetMethod ("PlayClip",              BindingFlags.Static | BindingFlags.Public, null, new System.Type[] { typeof(AudioClip)              }, null);
-		isPlaying         = audioUtilClass.GetMethod ("IsClipPlaying",         BindingFlags.Static | BindingFlags.Public, null, new System.Type[] { typeof(AudioClip)              }, null);
-		getSamplePosition = audioUtilClass.GetMethod ("GetClipSamplePosition", BindingFlags.Static | BindingFlags.Public, null, new System.Type[] { typeof(AudioClip)              }, null);
-		setSamplePosition = audioUtilClass.GetMethod ("SetClipSamplePosition", BindingFlags.Static | BindingFlags.Public, null, new System.Type[] { typeof(AudioClip), typeof(int) }, null);
-		pauseClip         = audioUtilClass.GetMethod ("PauseClip",             BindingFlags.Static | BindingFlags.Public, null, new System.Type[] { typeof(AudioClip)              }, null);
-		resumeClip        = audioUtilClass.GetMethod ("ResumeClip",            BindingFlags.Static | BindingFlags.Public, null, new System.Type[] { typeof(AudioClip)              }, null);
-		stopAllClips      = audioUtilClass.GetMethod ("StopAllClips",          BindingFlags.Static | BindingFlags.Public, null, new System.Type[] {                                }, null);
 	}
 
 	void OnDisable() {
-		StopAllClips ();
+		AudioUtility.StopAllClips ();
 	}
 
 	void Update() {
@@ -151,9 +131,9 @@ public class SongBuildTool : EditorWindow {
 
 		switch (action) {
 		case 0:
-			if (IsPlaying (availableSongs [selectedSong - 1]) && !isPaused) {
+			if (AudioUtility.IsPlaying (availableSongs [selectedSong - 1]) && !AudioUtility.IsPaused()) {
 				audioPosition       = audioSamplePosition /  availableSongs [selectedSong - 1].frequency;
-				audioSamplePosition = GetSamplePosition (availableSongs [selectedSong - 1]);
+				audioSamplePosition = AudioUtility.GetSamplePosition (availableSongs [selectedSong - 1]);
 				audioNotePosition   = audioSamplePosition / (availableSongs [selectedSong - 1].frequency / notesPerSecond);
 			} break;
 		case 1:
@@ -167,7 +147,7 @@ public class SongBuildTool : EditorWindow {
 			audioPosition       = audioSamplePosition /  availableSongs [selectedSong - 1].frequency; break;
 		}
 
-		if (action > 0) SetSamplePosition (availableSongs [selectedSong - 1], audioSamplePosition);
+		if (action > 0) AudioUtility.SetSamplePosition (availableSongs [selectedSong - 1], audioSamplePosition);
 
 
 		oldSelectedSong        = selectedSong;
@@ -176,8 +156,8 @@ public class SongBuildTool : EditorWindow {
 		oldAudioNotePosition   = audioNotePosition;
 
 
-		if (!IsPlaying(availableSongs[selectedSong - 1])) {
-			isPaused = false;
+		if (!AudioUtility.IsPlaying(availableSongs[selectedSong - 1]) && AudioUtility.IsPaused()) {
+			AudioUtility.StopAllClips (); // To set isPaused to false if it's still true, which is necessary if the clip plays to the end and stops on it's own
 			playPauseLabel = "►";
 		}
 
@@ -193,7 +173,7 @@ public class SongBuildTool : EditorWindow {
 
 		if (e.type == EventType.keyDown) {
 			if (e != null && e.keyCode == KeyCode.Space) {
-				if (isPaused || !IsPlaying(availableSongs[selectedSong - 1])) {
+				if (AudioUtility.IsPaused() || !AudioUtility.IsPlaying(availableSongs[selectedSong - 1])) {
 					this.PlayPause ();
 				} else {
 					this.Stop ();
@@ -205,7 +185,7 @@ public class SongBuildTool : EditorWindow {
 			}
 
 			if (e != null && e.keyCode == KeyCode.Backspace) {
-				StopAllClips ();
+				AudioUtility.StopAllClips ();
 
 				this.ResetAudioPosition ();
 
@@ -553,7 +533,7 @@ public class SongBuildTool : EditorWindow {
 
 						this.SwitchSong ();
 					} else {
-						StopAllClips ();
+						AudioUtility.StopAllClips ();
 
 						this.ResetAudioPosition ();
 					}
@@ -577,7 +557,7 @@ public class SongBuildTool : EditorWindow {
 
 						this.SwitchSong ();
 					} else {
-						StopAllClips ();
+						AudioUtility.StopAllClips ();
 
 						audioNotePosition = noteCount [selectedSong - 1];
 					}
@@ -695,18 +675,18 @@ public class SongBuildTool : EditorWindow {
 	private void SwitchSong() {
 		this.ResetAudioPosition ();
 
-		if (IsPlaying (availableSongs [selectedSong - 1])) {
-			StopAllClips ();
+		if (AudioUtility.IsPlaying (availableSongs [selectedSong - 1])) {
+			AudioUtility.StopAllClips ();
 
-			PlayPauseSong (availableSongs [selectedSong - 1]);
+			AudioUtility.PlayPauseClip (availableSongs [selectedSong - 1]);
 		}
 	}
 
 	private void PlayPause() {
-		PlayPauseSong (availableSongs [selectedSong - 1]);
-		SetSamplePosition (availableSongs [selectedSong - 1], audioSamplePosition);
+		AudioUtility.PlayPauseClip (availableSongs [selectedSong - 1]);
+		AudioUtility.SetSamplePosition (availableSongs [selectedSong - 1], audioSamplePosition);
 
-		if (isPaused) {
+		if (AudioUtility.IsPaused()) {
 			playPauseLabel = "►";
 		} else {
 			playAudioSamplePosition = audioSamplePosition;
@@ -716,12 +696,10 @@ public class SongBuildTool : EditorWindow {
 	}
 
 	private void Stop () {
-		isPaused = true;
-
-		pauseClip.Invoke (null, new object[] { availableSongs [selectedSong - 1] });
+		AudioUtility.PauseClip(availableSongs [selectedSong - 1]);
 
 		audioSamplePosition = playAudioSamplePosition;
-		SetSamplePosition (availableSongs [selectedSong - 1], audioSamplePosition);
+		AudioUtility.SetSamplePosition (availableSongs [selectedSong - 1], audioSamplePosition);
 
 		playPauseLabel = "►";
 	}
@@ -811,36 +789,5 @@ public class SongBuildTool : EditorWindow {
 
 	public bool CheckSave(int song) {
 		return File.Exists (Application.persistentDataPath + "/" + availableSongs [song].name + "_notes.dat");
-	}
-
-
-
-	public static void PlayPauseSong(AudioClip clip) {
-		if (!IsPlaying (clip)) {
-			playClip.Invoke (null, new object[] { clip });
-		} else if (!isPaused) {
-			isPaused = true;
-			pauseClip.Invoke (null, new object[] { clip });
-		} else {
-			isPaused = false;
-			resumeClip.Invoke (null, new object[] { clip });
-		}
-	}
-	
-	public static bool IsPlaying (AudioClip clip) {
-		return (bool)isPlaying.Invoke (null, new object[] { clip });
-	}
-
-	public static int GetSamplePosition(AudioClip clip) {
-		return (int)getSamplePosition.Invoke (null, new object[] { clip });
-	}
-
-	public static void SetSamplePosition(AudioClip clip, int pos) {
-		setSamplePosition.Invoke (null, new object[] { clip, pos });
-	}
-
-	public static void StopAllClips() {
-		if (isPaused) isPaused = false;
-		stopAllClips.Invoke (null, new object[] {});
 	}
 }

@@ -15,7 +15,8 @@ public class SpawnNotes : MonoBehaviour, AudioProcessor.AudioCallbacks {
 
 	private AudioClip song;
 
-	private AudioSource audioSource;
+	public AudioSource audioSource;
+	public AudioSource audiosSource2;
 
 	private AudioProcessor processor;
 
@@ -27,8 +28,6 @@ public class SpawnNotes : MonoBehaviour, AudioProcessor.AudioCallbacks {
 	private int position, oldPosition;
 
 	void Awake() {
-		audioSource = GetComponent<AudioSource> ();
-
 		this.LoadSongPath (selectedSong);
 		this.LoadSong (selectedSong);
 	}
@@ -42,6 +41,7 @@ public class SpawnNotes : MonoBehaviour, AudioProcessor.AudioCallbacks {
 		int oldPosition = 0;
 
 		audioSource.Play ();
+		audiosSource2.PlayDelayed (3.1f);
 	}
 	
 	// Update is called once per frame
@@ -110,6 +110,7 @@ public class SpawnNotes : MonoBehaviour, AudioProcessor.AudioCallbacks {
 
 	private void LoadSong(int song) {
 		audioSource.clip = Resources.Load (songPath) as AudioClip;
+		audiosSource2.clip = audioSource.clip;
 
 		if (File.Exists (Application.persistentDataPath + "/" + songName + "_notes.dat")) {
 			BinaryFormatter binaryFormatter = new BinaryFormatter ();

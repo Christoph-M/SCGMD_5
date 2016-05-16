@@ -23,6 +23,7 @@ public class Note : MonoBehaviour {
 
 	void OnTriggerEnter2D(Collider2D other) {
 		if (other.tag == "Hitzone") {
+//			Debug.Log (travelTime);
 			inTrigger = true;
 
 			other.GetComponent<SpriteRenderer> ().color = inTriggerColor;
